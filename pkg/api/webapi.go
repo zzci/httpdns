@@ -18,6 +18,7 @@ type registerRequest struct {
 type loginResponse struct {
 	Token    string `json:"token"`
 	Username string `json:"username"`
+	APIKey   string `json:"api_key"`
 }
 
 type addDomainRequest struct {
@@ -52,7 +53,7 @@ func (a *API) apiRegister(w http.ResponseWriter, r *http.Request, _ httprouter.P
 		jsonResp(w, http.StatusInternalServerError, map[string]string{"error": "token_error"})
 		return
 	}
-	jsonResp(w, http.StatusCreated, loginResponse{Token: token, Username: user.Username})
+	jsonResp(w, http.StatusCreated, loginResponse{Token: token, Username: user.Username, APIKey: user.APIKey})
 }
 
 // POST /api/login
@@ -77,7 +78,16 @@ func (a *API) apiLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Para
 		jsonResp(w, http.StatusInternalServerError, map[string]string{"error": "token_error"})
 		return
 	}
-	jsonResp(w, http.StatusOK, loginResponse{Token: token, Username: user.Username})
+	jsonResp(w, http.StatusOK, loginResponse{Token: token, Username: user.Username, APIKey: user.APIKey})
+}
+
+// GET /api/profile
+func (a *API) apiProfile(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	user, _ := getUserFromContext(r)
+	jsonResp(w, http.StatusOK, map[string]interface{}{
+		"username": user.Username,
+		"api_key":  user.APIKey,
+	})
 }
 
 // GET /api/domains

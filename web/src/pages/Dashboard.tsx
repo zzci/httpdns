@@ -24,6 +24,8 @@ export default function Dashboard() {
   const [records, setRecords] = useState<TXTRecord[]>([]);
   const [baseDomain, setBaseDomain] = useState('');
   const [apiDomain, setApiDomain] = useState('');
+  const [username, setUsername] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [newDomain, setNewDomain] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,15 +33,18 @@ export default function Dashboard() {
 
   const loadData = useCallback(async () => {
     try {
-      const [doms, recs, info] = await Promise.all([
+      const [doms, recs, info, profile] = await Promise.all([
         api.getDomains(),
         api.getRecords(),
         api.getInfo(),
+        api.getProfile(),
       ]);
       setDomains(doms || []);
       setRecords(recs || []);
       setBaseDomain(info.base_domain);
       setApiDomain(info.api_domain);
+      setUsername(profile.username);
+      setApiKey(profile.api_key);
     } catch (err: unknown) {
       if (err instanceof Error && err.message === 'invalid_token') {
         clearToken();
@@ -95,6 +100,14 @@ export default function Dashboard() {
       </div>
 
       {error && <div className="error">{error}</div>}
+
+      <div className="section">
+        <h2>API Credentials</h2>
+        <div className="info-box">
+          <strong>Username:</strong> <code>{username}</code> <CopyButton text={username} /><br />
+          <strong>API Key:</strong> <code>{apiKey}</code> <CopyButton text={apiKey} />
+        </div>
+      </div>
 
       <div className="section">
         <h2>My Domains</h2>
@@ -180,9 +193,12 @@ export default function Dashboard() {
           Use with <a href="https://go-acme.github.io/lego/dns/httpreq/" target="_blank" rel="noreferrer">lego httpreq</a> provider:<br />
           <code>HTTPREQ_ENDPOINT=https://{apiDomain}</code>
           <CopyButton text={`HTTPREQ_ENDPOINT=https://${apiDomain}`} /><br />
-          <code>HTTPREQ_USERNAME=&lt;your-username&gt;</code><br />
-          <code>HTTPREQ_PASSWORD=&lt;your-password&gt;</code><br />
-          <code>lego --dns httpreq --domains example.com run</code>
+          <code>HTTPREQ_USERNAME={username}</code>
+          <CopyButton text={`HTTPREQ_USERNAME=${username}`} /><br />
+          <code>HTTPREQ_PASSWORD={apiKey}</code>
+          <CopyButton text={`HTTPREQ_PASSWORD=${apiKey}`} /><br />
+          <code>LEGO_DISABLE_CNAME_SUPPORT=true</code>
+          <CopyButton text="LEGO_DISABLE_CNAME_SUPPORT=true" />
         </div>
       </div>
     </div>

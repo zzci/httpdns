@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -45,10 +46,10 @@ func (a *API) JWTAuth(next httprouter.Handle) httprouter.Handle {
 }
 
 // BasicAuthHTTPreq middleware for /present and /cleanup endpoints.
-// Authenticates using HTTP Basic Auth against database users.
+// Accepts username + api_key (preferred) or username + password via HTTP Basic Auth.
 func (a *API) BasicAuthHTTPreq(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		username, password, ok := r.BasicAuth()
+		username, secret, ok := r.BasicAuth()
 		if !ok {
 			w.Header().Set("WWW-Authenticate", `Basic realm="httpdns"`)
 			w.Header().Set("Content-Type", "application/json")
@@ -58,15 +59,19 @@ func (a *API) BasicAuthHTTPreq(next httprouter.Handle) httprouter.Handle {
 		}
 		user, err := a.DB.GetUserByUsername(username)
 		if err != nil {
-			// Constant-time comparison to prevent timing attacks
-			bcrypt.CompareHashAndPassword([]byte("$2a$10$placeholder_hash_for_timing"), []byte(password))
+			bcrypt.CompareHashAndPassword([]byte("$2a$10$placeholder_hash_for_timing"), []byte(secret))
 			w.Header().Set("WWW-Authenticate", `Basic realm="httpdns"`)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write(jsonError("unauthorized"))
 			return
 		}
-		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		// Try api_key first, then fall back to password
+		authenticated := user.APIKey != "" && subtle.ConstantTimeCompare([]byte(secret), []byte(user.APIKey)) == 1
+		if !authenticated {
+			authenticated = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(secret)) == nil
+		}
+		if !authenticated {
 			w.Header().Set("WWW-Authenticate", `Basic realm="httpdns"`)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)

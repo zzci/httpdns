@@ -31,6 +31,7 @@ type User struct {
 	ID           int64    `json:"id"`
 	Username     string   `json:"username"`
 	PasswordHash string   `json:"-"`
+	APIKey       string   `json:"api_key,omitempty"`
 	CreatedAt    int64    `json:"created_at"`
 	Domains      []string `json:"domains,omitempty"`
 }

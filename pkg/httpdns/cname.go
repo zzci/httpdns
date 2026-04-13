@@ -8,6 +8,18 @@ import (
 
 const nanoidAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 const nanoidLength = 8
+const apiKeyLength = 32
+
+// GenerateAPIKey creates a random API key (32-char lowercase alphanumeric).
+func GenerateAPIKey() string {
+	b := make([]byte, apiKeyLength)
+	max := big.NewInt(int64(len(nanoidAlphabet)))
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, max)
+		b[i] = nanoidAlphabet[n.Int64()]
+	}
+	return string(b)
+}
 
 // GenerateSubdomain creates a random nanoid-style subdomain (lowercase alphanumeric).
 func GenerateSubdomain() string {

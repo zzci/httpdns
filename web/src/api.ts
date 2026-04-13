@@ -23,6 +23,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export interface AuthResponse {
   token: string;
   username: string;
+  api_key: string;
+}
+
+export interface ProfileResponse {
+  username: string;
+  api_key: string;
 }
 
 export interface Domain {
@@ -68,6 +74,8 @@ export const api = {
     }),
 
   getRecords: () => request<TXTRecord[]>('/api/records'),
+
+  getProfile: () => request<ProfileResponse>('/api/profile'),
 
   getInfo: () => request<InfoResponse>('/api/info'),
 };

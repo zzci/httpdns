@@ -27,7 +27,7 @@ type acmednsdb struct {
 }
 
 // DBVersion shows the database version this code uses.
-var DBVersion = 3
+var DBVersion = 4
 
 var acmeTable = `
 	CREATE TABLE IF NOT EXISTS acmedns(
@@ -55,6 +55,7 @@ var usersTable = `
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
+		api_key TEXT UNIQUE NOT NULL,
 		created_at INT NOT NULL
 	);`
 
@@ -63,6 +64,7 @@ var usersTablePG = `
 		id SERIAL PRIMARY KEY,
 		username TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
+		api_key TEXT UNIQUE NOT NULL,
 		created_at INT NOT NULL
 	);`
 
@@ -153,6 +155,11 @@ func (d *acmednsdb) handleDBUpgrades(version int) error {
 			return err
 		}
 	}
+	if version < 4 {
+		if err := d.handleDBUpgradeTo4(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -199,8 +206,30 @@ func (d *acmednsdb) handleDBUpgradeTo2() error {
 }
 
 func (d *acmednsdb) handleDBUpgradeTo3() error {
-	// Tables are created in Init, just bump version
 	_, err := d.DB.Exec("UPDATE acmedns SET Value='3' WHERE Name='db_version'")
+	return err
+}
+
+func (d *acmednsdb) handleDBUpgradeTo4() error {
+	// Add api_key column to existing users table
+	if d.Config.Database.Engine == "sqlite" {
+		_, _ = d.DB.Exec("ALTER TABLE users ADD COLUMN api_key TEXT UNIQUE DEFAULT ''")
+	} else {
+		_, _ = d.DB.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key TEXT UNIQUE DEFAULT ''")
+	}
+	// Generate api_key for existing users that don't have one
+	rows, err := d.DB.Query("SELECT id FROM users WHERE api_key = '' OR api_key IS NULL")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err == nil {
+				key := httpdns.GenerateAPIKey()
+				_, _ = d.DB.Exec("UPDATE users SET api_key = ? WHERE id = ?", key, id)
+			}
+		}
+	}
+	_, err = d.DB.Exec("UPDATE acmedns SET Value='4' WHERE Name='db_version'")
 	return err
 }
 
@@ -335,27 +364,28 @@ func (d *acmednsdb) CreateUser(username, passwordHash string) (httpdns.User, err
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	now := time.Now().Unix()
-	insSQL := `INSERT INTO users (username, password_hash, created_at) VALUES ($1, $2, $3)`
+	apiKey := httpdns.GenerateAPIKey()
+	insSQL := `INSERT INTO users (username, password_hash, api_key, created_at) VALUES ($1, $2, $3, $4)`
 	if d.Config.Database.Engine == "sqlite" {
 		insSQL = getSQLiteStmt(insSQL)
 	}
-	result, err := d.DB.Exec(insSQL, username, passwordHash, now)
+	result, err := d.DB.Exec(insSQL, username, passwordHash, apiKey, now)
 	if err != nil {
 		return httpdns.User{}, fmt.Errorf("failed to create user: %w", err)
 	}
 	id, _ := result.LastInsertId()
-	return httpdns.User{ID: id, Username: username, PasswordHash: passwordHash, CreatedAt: now}, nil
+	return httpdns.User{ID: id, Username: username, PasswordHash: passwordHash, APIKey: apiKey, CreatedAt: now}, nil
 }
 
 func (d *acmednsdb) GetUserByUsername(username string) (httpdns.User, error) {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	var u httpdns.User
-	getSQL := `SELECT id, username, password_hash, created_at FROM users WHERE username=$1`
+	getSQL := `SELECT id, username, password_hash, api_key, created_at FROM users WHERE username=$1`
 	if d.Config.Database.Engine == "sqlite" {
 		getSQL = getSQLiteStmt(getSQL)
 	}
-	err := d.DB.QueryRow(getSQL, username).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
+	err := d.DB.QueryRow(getSQL, username).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.APIKey, &u.CreatedAt)
 	if err != nil {
 		return u, fmt.Errorf("user not found: %w", err)
 	}
@@ -366,11 +396,11 @@ func (d *acmednsdb) GetUserByID(id int64) (httpdns.User, error) {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	var u httpdns.User
-	getSQL := `SELECT id, username, password_hash, created_at FROM users WHERE id=$1`
+	getSQL := `SELECT id, username, password_hash, api_key, created_at FROM users WHERE id=$1`
 	if d.Config.Database.Engine == "sqlite" {
 		getSQL = getSQLiteStmt(getSQL)
 	}
-	err := d.DB.QueryRow(getSQL, id).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt)
+	err := d.DB.QueryRow(getSQL, id).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.APIKey, &u.CreatedAt)
 	if err != nil {
 		return u, fmt.Errorf("user not found: %w", err)
 	}
@@ -471,14 +501,14 @@ func (d *acmednsdb) ListUsers() ([]httpdns.User, error) {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	var users []httpdns.User
-	rows, err := d.DB.Query("SELECT id, username, password_hash, created_at FROM users ORDER BY id")
+	rows, err := d.DB.Query("SELECT id, username, password_hash, api_key, created_at FROM users ORDER BY id")
 	if err != nil {
 		return users, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var u httpdns.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.APIKey, &u.CreatedAt); err != nil {
 			return users, err
 		}
 		users = append(users, u)
