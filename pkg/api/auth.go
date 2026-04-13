@@ -8,7 +8,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/zzci/httpdns/pkg/httpdns"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type contextKey int
@@ -59,18 +58,14 @@ func (a *API) BasicAuthHTTPreq(next httprouter.Handle) httprouter.Handle {
 		}
 		user, err := a.DB.GetUserByUsername(username)
 		if err != nil {
-			bcrypt.CompareHashAndPassword([]byte("$2a$10$placeholder_hash_for_timing"), []byte(secret))
 			w.Header().Set("WWW-Authenticate", `Basic realm="httpdns"`)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write(jsonError("unauthorized"))
 			return
 		}
-		// Try api_key first, then fall back to password
+		// Basic Auth only accepts api_key, not password
 		authenticated := user.APIKey != "" && subtle.ConstantTimeCompare([]byte(secret), []byte(user.APIKey)) == 1
-		if !authenticated {
-			authenticated = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(secret)) == nil
-		}
 		if !authenticated {
 			w.Header().Set("WWW-Authenticate", `Basic realm="httpdns"`)
 			w.Header().Set("Content-Type", "application/json")

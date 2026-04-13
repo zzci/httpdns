@@ -64,11 +64,11 @@ func setupTestServer() (*httptest.Server, API, httpdns.DB) {
 	return server, a, db
 }
 
-func registerAndLogin(e *httpexpect.Expect, username, password string) string {
+func registerAndLogin(e *httpexpect.Expect, username, password string) (token, apiKey string) {
 	resp := e.POST("/api/register").
 		WithJSON(map[string]string{"username": username, "password": password}).
 		Expect().Status(http.StatusCreated).JSON().Object()
-	return resp.Value("token").String().Raw()
+	return resp.Value("token").String().Raw(), resp.Value("api_key").String().Raw()
 }
 
 func TestApiRegisterAndLogin(t *testing.T) {
@@ -111,7 +111,7 @@ func TestApiDomainManagement(t *testing.T) {
 	defer server.Close()
 	e := getExpect(t, server)
 
-	token := registerAndLogin(e, "domuser", "password123")
+	token, _ := registerAndLogin(e, "domuser", "password123")
 
 	// No auth
 	e.GET("/api/domains").Expect().Status(http.StatusUnauthorized)
@@ -156,8 +156,8 @@ func TestApiDomainIsolation(t *testing.T) {
 	defer server.Close()
 	e := getExpect(t, server)
 
-	token1 := registerAndLogin(e, "user1", "password1")
-	token2 := registerAndLogin(e, "user2", "password2")
+	token1, _ := registerAndLogin(e, "user1", "password1")
+	token2, _ := registerAndLogin(e, "user2", "password2")
 
 	// user1 adds domain
 	resp1 := e.POST("/api/domains").
@@ -190,7 +190,7 @@ func TestApiPresentWithDBAuth(t *testing.T) {
 	e := getExpect(t, server)
 
 	// Register user and add domain via API
-	token := registerAndLogin(e, "dnsuser", "password123")
+	token, apiKey := registerAndLogin(e, "dnsuser", "password123")
 	resp := e.POST("/api/domains").
 		WithHeader("Authorization", "Bearer "+token).
 		WithJSON(map[string]string{"domain": "example.com"}).
@@ -200,7 +200,7 @@ func TestApiPresentWithDBAuth(t *testing.T) {
 	// Present with Basic Auth (matching DB user)
 	e.POST("/present").
 		WithJSON(map[string]string{"fqdn": "_acme-challenge.example.com.", "value": "token123"}).
-		WithBasicAuth("dnsuser", "password123").
+		WithBasicAuth("dnsuser", apiKey).
 		Expect().Status(http.StatusOK)
 
 	// Verify TXT in DB — stored under <nanoid>.dnsall.com
@@ -213,13 +213,13 @@ func TestApiPresentWithDBAuth(t *testing.T) {
 	// Present for unauthorized domain
 	e.POST("/present").
 		WithJSON(map[string]string{"fqdn": "_acme-challenge.other.com.", "value": "token456"}).
-		WithBasicAuth("dnsuser", "password123").
+		WithBasicAuth("dnsuser", apiKey).
 		Expect().Status(http.StatusForbidden)
 
 	// Cleanup
 	e.POST("/cleanup").
 		WithJSON(map[string]string{"fqdn": "_acme-challenge.example.com.", "value": "token123"}).
-		WithBasicAuth("dnsuser", "password123").
+		WithBasicAuth("dnsuser", apiKey).
 		Expect().Status(http.StatusOK)
 }
 
@@ -228,7 +228,7 @@ func TestApiRecords(t *testing.T) {
 	defer server.Close()
 	e := getExpect(t, server)
 
-	token := registerAndLogin(e, "recuser", "password123")
+	token, _ := registerAndLogin(e, "recuser", "password123")
 	resp := e.POST("/api/domains").
 		WithHeader("Authorization", "Bearer "+token).
 		WithJSON(map[string]string{"domain": "rec.com"}).
