@@ -2,6 +2,8 @@
 
 DNS TXT record management server for ACME DNS-01 challenges, compatible with [lego httpreq](https://go-acme.github.io/lego/dns/httpreq/) provider.
 
+**Online Service:** [https://dnsall.com](https://dnsall.com) — free to use, no deployment required.
+
 ## Features
 
 - **CNAME delegation** — delegate `_acme-challenge` records via CNAME, no need to give CA clients access to your primary DNS
