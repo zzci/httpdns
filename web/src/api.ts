@@ -77,5 +77,8 @@ export const api = {
 
   getProfile: () => request<ProfileResponse>('/api/profile'),
 
+  regenerateKey: () =>
+    request<{ api_key: string }>('/api/profile/regenerate-key', { method: 'POST' }),
+
   getInfo: () => request<InfoResponse>('/api/info'),
 };

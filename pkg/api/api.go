@@ -61,6 +61,7 @@ func (a *API) Start(dnsservers []httpdns.NS) {
 	router.POST("/api/login", a.apiLogin)
 	router.GET("/api/info", a.apiInfo)
 	router.GET("/api/profile", a.JWTAuth(a.apiProfile))
+	router.POST("/api/profile/regenerate-key", a.JWTAuth(a.apiRegenerateKey))
 	router.GET("/api/domains", a.JWTAuth(a.apiGetDomains))
 	router.POST("/api/domains", a.JWTAuth(a.apiAddDomain))
 	router.DELETE("/api/domains/:domain", a.JWTAuth(a.apiRemoveDomain))

@@ -193,6 +193,23 @@ tr:last-child td { border-bottom: none; }
   color: #999;
 }
 
+.btn-regen {
+  padding: 0.2rem 0.5rem;
+  margin-left: 0.5rem;
+  background: none;
+  border: 1px solid #e89a0c;
+  color: #e89a0c;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+.btn-regen:hover {
+  background: #e89a0c;
+  color: #fff;
+}
+
 .btn-delete {
   padding: 0.25rem 0.5rem;
   background: none;

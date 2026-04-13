@@ -85,6 +85,16 @@ export default function Dashboard() {
     }
   };
 
+  const handleRegenerateKey = async () => {
+    if (!confirm('Regenerate API Key? Existing integrations using the old key will stop working.')) return;
+    try {
+      const res = await api.regenerateKey();
+      setApiKey(res.api_key);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to regenerate key');
+    }
+  };
+
   const handleLogout = () => {
     clearToken();
     navigate('/login');
@@ -106,6 +116,7 @@ export default function Dashboard() {
         <div className="info-box">
           <strong>Username:</strong> <code>{username}</code> <CopyButton text={username} /><br />
           <strong>API Key:</strong> <code>{apiKey}</code> <CopyButton text={apiKey} />
+          <button className="btn-regen" onClick={handleRegenerateKey}>Regenerate</button>
         </div>
       </div>
 

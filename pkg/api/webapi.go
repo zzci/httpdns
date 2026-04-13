@@ -90,6 +90,17 @@ func (a *API) apiProfile(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	})
 }
 
+// POST /api/profile/regenerate-key
+func (a *API) apiRegenerateKey(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	user, _ := getUserFromContext(r)
+	newKey, err := a.DB.RegenerateAPIKey(user.ID)
+	if err != nil {
+		jsonResp(w, http.StatusInternalServerError, map[string]string{"error": "db_error"})
+		return
+	}
+	jsonResp(w, http.StatusOK, map[string]string{"api_key": newKey})
+}
+
 // GET /api/domains
 func (a *API) apiGetDomains(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	user, _ := getUserFromContext(r)

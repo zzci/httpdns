@@ -407,6 +407,21 @@ func (d *acmednsdb) GetUserByID(id int64) (httpdns.User, error) {
 	return u, nil
 }
 
+func (d *acmednsdb) RegenerateAPIKey(userID int64) (string, error) {
+	d.Mutex.Lock()
+	defer d.Mutex.Unlock()
+	newKey := httpdns.GenerateAPIKey()
+	updSQL := `UPDATE users SET api_key=$1 WHERE id=$2`
+	if d.Config.Database.Engine == "sqlite" {
+		updSQL = getSQLiteStmt(updSQL)
+	}
+	_, err := d.DB.Exec(updSQL, newKey, userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to regenerate api key: %w", err)
+	}
+	return newKey, nil
+}
+
 // --- Domain methods ---
 
 func (d *acmednsdb) AddUserDomain(userID int64, domain string) (httpdns.UserDomain, error) {
