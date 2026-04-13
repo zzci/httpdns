@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>httpdns — ACME DNS Challenge Server</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a2e; background: #f8f9fc; }
+
+  .hero {
+    background: linear-gradient(135deg, #1e40af, #0ea5e9);
+    color: #fff;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  .hero h1 { font-size: 3rem; margin-bottom: 0.5rem; }
+  .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
+  .hero .badges { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+  .hero .badges img { height: 24px; }
+  .hero .buttons { margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .hero .buttons a {
+    padding: 0.7rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .btn-primary { background: #fff; color: #1e40af; }
+  .btn-secondary { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 3rem 2rem; }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  .feature {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .feature h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #1e40af; }
+  .feature p { font-size: 0.9rem; color: #555; line-height: 1.5; }
+
+  h2 { font-size: 1.5rem; margin-bottom: 1rem; color: #1a1a2e; }
+
+  .diagram {
+    background: #1a1a2e;
+    color: #a5b4fc;
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 1.5rem 0;
+  }
+
+  .code-block {
+    background: #1a1a2e;
+    color: #e2e8f0;
+    padding: 1.25rem;
+    border-radius: 8px;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  .code-block .comment { color: #64748b; }
+  .code-block .key { color: #7dd3fc; }
+  .code-block .value { color: #86efac; }
+
+  .section { margin-bottom: 3rem; }
+
+  .api-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  .api-table th, .api-table td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  .api-table th { background: #f1f5f9; font-size: 0.8rem; text-transform: uppercase; color: #64748b; }
+  .api-table td { font-size: 0.9rem; }
+  .api-table code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.82rem; }
+  .method { font-weight: 600; color: #1e40af; }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  footer a { color: #64748b; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>httpdns</h1>
+  <p>DNS TXT record management server for ACME DNS-01 challenges. Works with lego, Traefik, and any httpreq-compatible client.</p>
+  <div class="badges">
+    <img src="https://img.shields.io/docker/pulls/zzci/httpdns?style=flat-square" alt="Docker Pulls">
+    <img src="https://img.shields.io/github/v/release/zzci/httpdns?style=flat-square" alt="Release">
+    <img src="https://img.shields.io/github/license/zzci/httpdns?style=flat-square" alt="License">
+  </div>
+  <div class="buttons">
+    <a href="https://github.com/zzci/httpdns" class="btn-primary">GitHub</a>
+    <a href="https://hub.docker.com/r/zzci/httpdns" class="btn-secondary">Docker Hub</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="section">
+    <h2>Features</h2>
+    <div class="features">
+      <div class="feature">
+        <h3>CNAME Delegation</h3>
+        <p>Delegate _acme-challenge records via CNAME. No need to give CA clients access to your primary DNS zone.</p>
+      </div>
+      <div class="feature">
+        <h3>Multi-User</h3>
+        <p>Each user gets isolated domains with unique nanoid subdomains. Different users can manage the same domain independently.</p>
+      </div>
+      <div class="feature">
+        <h3>API Key Auth</h3>
+        <p>Separate API keys for httpreq Basic Auth. Web login uses password, CLI uses API key.</p>
+      </div>
+      <div class="feature">
+        <h3>Web Dashboard</h3>
+        <p>Manage domains, view CNAME records, check active TXT records, and copy httpreq configuration.</p>
+      </div>
+      <div class="feature">
+        <h3>Single Binary</h3>
+        <p>SPA frontend embedded in the Go binary. Deploy one file, no separate frontend server needed.</p>
+      </div>
+      <div class="feature">
+        <h3>Multi-Arch Docker</h3>
+        <p>Pre-built images for linux/amd64 and linux/arm64. Works on cloud VMs and Raspberry Pi.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>How It Works</h2>
+    <div class="diagram">┌─────────────────────────────┐     CNAME      ┌─────────────────────────┐
+│ _acme-challenge.example.com │ ──────────────▶ │ r0hc4bc6.s.dnsall.com   │
+└─────────────────────────────┘                 └────────────┬────────────┘
+                                                             │
+┌──────────┐   POST /present (Basic Auth)   ┌────────────────▼──────────┐
+│   lego   │ ──────────────────────────────▶ │         httpdns           │
+│  httpreq │   {fqdn, value}                │  ┌─────────┐ ┌─────────┐ │
+└──────────┘                                │  │ HTTP API│ │   DNS   │ │
+                                            │  └─────────┘ └─────────┘ │
+                                            └───────────────────────────┘</div>
+  </div>
+
+  <div class="section">
+    <h2>Quick Start</h2>
+    <div class="code-block"><span class="comment"># docker-compose.yml</span>
+<span class="key">services</span>:
+  <span class="key">httpdns</span>:
+    <span class="key">image</span>: <span class="value">zzci/httpdns:latest</span>
+    <span class="key">ports</span>:
+      - <span class="value">"53:53/udp"</span>
+      - <span class="value">"53:53"</span>
+      - <span class="value">"3000:3000"</span>
+    <span class="key">volumes</span>:
+      - <span class="value">./data:/app/data</span></div>
+  </div>
+
+  <div class="section">
+    <h2>Usage with lego</h2>
+    <div class="code-block"><span class="key">LEGO_DISABLE_CNAME_SUPPORT</span>=<span class="value">true</span> \
+<span class="key">HTTPREQ_ENDPOINT</span>=<span class="value">https://api.dnsall.com</span> \
+<span class="key">HTTPREQ_USERNAME</span>=<span class="value">myuser</span> \
+<span class="key">HTTPREQ_PASSWORD</span>=<span class="value">&lt;api_key&gt;</span> \
+lego --dns httpreq --dns.propagation-disable-ans \
+  --domains example.com --domains "*.example.com" \
+  --email admin@example.com --accept-tos run</div>
+  </div>
+
+  <div class="section">
+    <h2>API Endpoints</h2>
+    <table class="api-table">
+      <thead>
+        <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="method">POST</td><td><code>/present</code></td><td>Basic Auth</td><td>Store TXT record</td></tr>
+        <tr><td class="method">POST</td><td><code>/cleanup</code></td><td>Basic Auth</td><td>Remove TXT record</td></tr>
+        <tr><td class="method">POST</td><td><code>/api/register</code></td><td>None</td><td>Register user</td></tr>
+        <tr><td class="method">POST</td><td><code>/api/login</code></td><td>None</td><td>Login</td></tr>
+        <tr><td class="method">GET</td><td><code>/api/domains</code></td><td>JWT</td><td>List domains</td></tr>
+        <tr><td class="method">POST</td><td><code>/api/domains</code></td><td>JWT</td><td>Add domain</td></tr>
+        <tr><td class="method">GET</td><td><code>/api/records</code></td><td>JWT</td><td>List TXT records</td></tr>
+        <tr><td class="method">GET</td><td><code>/admin/users</code></td><td>Admin Key</td><td>List all users</td></tr>
+        <tr><td class="method">GET</td><td><code>/admin/domains</code></td><td>Admin Key</td><td>List all domains</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <a href="https://github.com/zzci/httpdns">GitHub</a> · MIT License
+</footer>
+
+</body>
+</html>
