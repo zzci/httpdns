@@ -3,207 +3,389 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>httpdns — ACME DNS Challenge Server</title>
+<title>httpdns — Automated SSL Certificate DNS Verification</title>
+<meta name="description" content="Self-hosted DNS server for ACME DNS-01 challenges. Automate wildcard SSL certificates with lego, Traefik, and any httpreq client.">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a2e; background: #f8f9fc; }
+:root {
+  --blue-700: #1e40af;
+  --blue-500: #3b82f6;
+  --sky-500: #0ea5e9;
+  --green-400: #34d399;
+  --slate-900: #0f172a;
+  --slate-700: #334155;
+  --slate-500: #64748b;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50: #f8fafc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--slate-900); background: #fff; line-height: 1.6; }
+a { color: var(--blue-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-  .hero {
-    background: linear-gradient(135deg, #1e40af, #0ea5e9);
-    color: #fff;
-    padding: 4rem 2rem;
-    text-align: center;
-  }
-  .hero h1 { font-size: 3rem; margin-bottom: 0.5rem; }
-  .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
-  .hero .badges { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-  .hero .badges img { height: 24px; }
-  .hero .buttons { margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-  .hero .buttons a {
-    padding: 0.7rem 1.5rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-  .btn-primary { background: #fff; color: #1e40af; }
-  .btn-secondary { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+/* Nav */
+nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; max-width: 1100px; margin: 0 auto; }
+nav .logo { font-size: 1.25rem; font-weight: 700; color: var(--slate-900); }
+nav .logo span { color: var(--blue-500); }
+nav .links { display: flex; gap: 1.5rem; align-items: center; }
+nav .links a { color: var(--slate-700); font-size: 0.9rem; font-weight: 500; }
+nav .gh-btn { background: var(--slate-900); color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.85rem; }
 
-  .container { max-width: 860px; margin: 0 auto; padding: 3rem 2rem; }
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 5rem 2rem 4rem;
+  background: linear-gradient(180deg, var(--slate-50) 0%, #fff 100%);
+}
+.hero h1 { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem; }
+.hero h1 .accent { background: linear-gradient(135deg, var(--blue-700), var(--sky-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero .subtitle { font-size: 1.2rem; color: var(--slate-500); max-width: 620px; margin: 0 auto 2rem; }
+.hero .cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.hero .cta a { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; transition: transform 0.1s; }
+.hero .cta a:hover { transform: translateY(-1px); text-decoration: none; }
+.cta-primary { background: var(--blue-700); color: #fff !important; }
+.cta-secondary { background: var(--slate-100); color: var(--slate-900) !important; border: 1px solid var(--slate-200); }
+.hero .badges { margin-top: 1.5rem; display: flex; gap: 0.5rem; justify-content: center; }
+.hero .badges img { height: 22px; }
 
-  .features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
-    margin: 2rem 0;
-  }
-  .feature {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  }
-  .feature h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #1e40af; }
-  .feature p { font-size: 0.9rem; color: #555; line-height: 1.5; }
+/* Terminal */
+.terminal-wrap { max-width: 700px; margin: 3rem auto 0; text-align: left; }
+.terminal {
+  background: var(--slate-900);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.terminal-bar { background: #1e293b; padding: 0.6rem 1rem; display: flex; gap: 0.4rem; }
+.terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+.terminal-dot.r { background: #ef4444; }
+.terminal-dot.y { background: #eab308; }
+.terminal-dot.g { background: #22c55e; }
+.terminal-body {
+  padding: 1.25rem 1.5rem;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: #e2e8f0;
+  overflow-x: auto;
+}
+.terminal-body .prompt { color: var(--green-400); }
+.terminal-body .flag { color: var(--sky-500); }
+.terminal-body .val { color: #fbbf24; }
+.terminal-body .dim { color: var(--slate-500); }
 
-  h2 { font-size: 1.5rem; margin-bottom: 1rem; color: #1a1a2e; }
+/* Section layout */
+.section { max-width: 1100px; margin: 0 auto; padding: 5rem 2rem; }
+.section-alt { background: var(--slate-50); }
+.section-header { text-align: center; margin-bottom: 3rem; }
+.section-header h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+.section-header p { color: var(--slate-500); font-size: 1.05rem; }
 
-  .diagram {
-    background: #1a1a2e;
-    color: #a5b4fc;
-    padding: 1.5rem;
-    border-radius: 8px;
-    font-family: "SF Mono", Monaco, Consolas, monospace;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    overflow-x: auto;
-    white-space: pre;
-    margin: 1.5rem 0;
-  }
+/* Features grid */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+@media (max-width: 768px) { .features { grid-template-columns: 1fr; } }
+.feature {
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 1.75rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.feature:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.06); transform: translateY(-2px); }
+.feature-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 1rem; }
+.fi-blue { background: #dbeafe; color: var(--blue-700); }
+.fi-green { background: #d1fae5; color: #059669; }
+.fi-purple { background: #ede9fe; color: #7c3aed; }
+.fi-orange { background: #ffedd5; color: #ea580c; }
+.fi-cyan { background: #cffafe; color: #0891b2; }
+.fi-pink { background: #fce7f3; color: #db2777; }
+.feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem; }
+.feature p { font-size: 0.9rem; color: var(--slate-500); line-height: 1.5; }
 
-  .code-block {
-    background: #1a1a2e;
-    color: #e2e8f0;
-    padding: 1.25rem;
-    border-radius: 8px;
-    font-family: "SF Mono", Monaco, Consolas, monospace;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    overflow-x: auto;
-    margin: 1rem 0;
-  }
-  .code-block .comment { color: #64748b; }
-  .code-block .key { color: #7dd3fc; }
-  .code-block .value { color: #86efac; }
+/* How it works */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; counter-reset: step; }
+@media (max-width: 768px) { .steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .steps { grid-template-columns: 1fr; } }
+.step { text-align: center; }
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--blue-700); color: #fff;
+  font-weight: 700; font-size: 0.9rem; margin-bottom: 0.75rem;
+}
+.step h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+.step p { font-size: 0.85rem; color: var(--slate-500); }
 
-  .section { margin-bottom: 3rem; }
+/* Integration logos */
+.integrations { display: flex; gap: 3rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 2rem; }
+.integration { text-align: center; color: var(--slate-500); font-size: 0.85rem; font-weight: 500; }
+.integration .name { margin-top: 0.3rem; }
 
-  .api-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  .api-table th, .api-table td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
-  .api-table th { background: #f1f5f9; font-size: 0.8rem; text-transform: uppercase; color: #64748b; }
-  .api-table td { font-size: 0.9rem; }
-  .api-table code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.82rem; }
-  .method { font-weight: 600; color: #1e40af; }
+/* Code sections */
+.code-tabs { display: flex; gap: 2rem; margin-top: 2rem; }
+@media (max-width: 768px) { .code-tabs { flex-direction: column; } }
+.code-tab { flex: 1; }
+.code-tab h3 { font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--slate-700); }
+.code-box {
+  background: var(--slate-900);
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.code-box .cm { color: var(--slate-500); }
+.code-box .k { color: #7dd3fc; }
+.code-box .v { color: #86efac; }
+.code-box .f { color: #fbbf24; }
 
-  footer {
-    text-align: center;
-    padding: 2rem;
-    color: #94a3b8;
-    font-size: 0.85rem;
-    border-top: 1px solid #e5e7eb;
-  }
-  footer a { color: #64748b; }
+/* API reference */
+.api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 768px) { .api-grid { grid-template-columns: 1fr; } }
+.api-group { background: #fff; border: 1px solid var(--slate-200); border-radius: 10px; padding: 1.5rem; }
+.api-group h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--slate-700); display: flex; align-items: center; gap: 0.4rem; }
+.api-group .badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 500; }
+.badge-none { background: #f0fdf4; color: #16a34a; }
+.badge-jwt { background: #dbeafe; color: var(--blue-700); }
+.badge-basic { background: #fef3c7; color: #b45309; }
+.badge-admin { background: #fce7f3; color: #be185d; }
+.api-item { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.3rem 0; font-size: 0.85rem; }
+.api-method { font-weight: 700; color: var(--blue-500); font-size: 0.75rem; width: 50px; flex-shrink: 0; }
+.api-path { font-family: "SF Mono", Monaco, monospace; font-size: 0.8rem; color: var(--slate-700); }
+
+/* CTA bottom */
+.cta-bottom { text-align: center; padding: 5rem 2rem; }
+.cta-bottom h2 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+.cta-bottom p { color: var(--slate-500); margin-bottom: 2rem; font-size: 1.05rem; }
+.cta-bottom .cta { display: flex; gap: 1rem; justify-content: center; }
+
+/* Footer */
+footer { border-top: 1px solid var(--slate-200); padding: 2rem; text-align: center; color: var(--slate-500); font-size: 0.85rem; }
+footer a { color: var(--slate-500); margin: 0 0.5rem; }
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <h1>httpdns</h1>
-  <p>DNS TXT record management server for ACME DNS-01 challenges. Works with lego, Traefik, and any httpreq-compatible client.</p>
-  <div class="badges">
-    <img src="https://img.shields.io/docker/pulls/zzci/httpdns?style=flat-square" alt="Docker Pulls">
-    <img src="https://img.shields.io/github/v/release/zzci/httpdns?style=flat-square" alt="Release">
-    <img src="https://img.shields.io/github/license/zzci/httpdns?style=flat-square" alt="License">
+<nav>
+  <div class="logo">http<span>dns</span></div>
+  <div class="links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="#setup">Setup</a>
+    <a href="#api">API</a>
+    <a href="https://github.com/zzci/httpdns" class="gh-btn">GitHub</a>
   </div>
-  <div class="buttons">
-    <a href="https://github.com/zzci/httpdns" class="btn-primary">GitHub</a>
-    <a href="https://hub.docker.com/r/zzci/httpdns" class="btn-secondary">Docker Hub</a>
-  </div>
-</div>
+</nav>
 
-<div class="container">
-  <div class="section">
-    <h2>Features</h2>
-    <div class="features">
-      <div class="feature">
-        <h3>CNAME Delegation</h3>
-        <p>Delegate _acme-challenge records via CNAME. No need to give CA clients access to your primary DNS zone.</p>
+<div class="hero">
+  <h1>Automate <span class="accent">SSL Certificates</span><br>with DNS Verification</h1>
+  <p class="subtitle">Self-hosted DNS challenge server for ACME. Get wildcard certificates for any domain with a simple CNAME record.</p>
+  <div class="cta">
+    <a href="#setup" class="cta-primary">Get Started</a>
+    <a href="https://github.com/zzci/httpdns" class="cta-secondary">View on GitHub</a>
+  </div>
+  <div class="badges">
+    <img src="https://img.shields.io/docker/pulls/zzci/httpdns?style=flat-square&color=0ea5e9" alt="Docker Pulls">
+    <img src="https://img.shields.io/github/v/release/zzci/httpdns?style=flat-square&color=3b82f6" alt="Release">
+    <img src="https://img.shields.io/github/license/zzci/httpdns?style=flat-square&color=64748b" alt="License">
+  </div>
+
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="terminal-dot r"></div>
+        <div class="terminal-dot y"></div>
+        <div class="terminal-dot g"></div>
       </div>
-      <div class="feature">
-        <h3>Multi-User</h3>
-        <p>Each user gets isolated domains with unique nanoid subdomains. Different users can manage the same domain independently.</p>
-      </div>
-      <div class="feature">
-        <h3>API Key Auth</h3>
-        <p>Separate API keys for httpreq Basic Auth. Web login uses password, CLI uses API key.</p>
-      </div>
-      <div class="feature">
-        <h3>Web Dashboard</h3>
-        <p>Manage domains, view CNAME records, check active TXT records, and copy httpreq configuration.</p>
-      </div>
-      <div class="feature">
-        <h3>Single Binary</h3>
-        <p>SPA frontend embedded in the Go binary. Deploy one file, no separate frontend server needed.</p>
-      </div>
-      <div class="feature">
-        <h3>Multi-Arch Docker</h3>
-        <p>Pre-built images for linux/amd64 and linux/arm64. Works on cloud VMs and Raspberry Pi.</p>
+      <div class="terminal-body">
+<span class="dim"># Issue a wildcard certificate in one command</span>
+<span class="prompt">$</span> <span class="flag">HTTPREQ_ENDPOINT</span>=<span class="val">https://api.dnsall.com</span> \
+  <span class="flag">HTTPREQ_USERNAME</span>=<span class="val">myuser</span> \
+  <span class="flag">HTTPREQ_PASSWORD</span>=<span class="val">$API_KEY</span> \
+  lego <span class="flag">--dns</span> httpreq <span class="flag">--domains</span> <span class="val">"*.example.com"</span> <span class="flag">--accept-tos</span> run
+
+<span class="dim">[INFO] [*.example.com] acme: Obtaining certificate</span>
+<span class="dim">[INFO] [*.example.com] acme: use dns-01 solver</span>
+<span class="dim">[INFO] [*.example.com] The server validated our request</span>
+<span class="prompt">[INFO] [*.example.com] Server responded with a certificate.</span>
       </div>
     </div>
   </div>
+</div>
 
+<div id="features" class="section-alt">
   <div class="section">
-    <h2>How It Works</h2>
-    <div class="diagram">┌─────────────────────────────┐     CNAME      ┌─────────────────────────┐
-│ _acme-challenge.example.com │ ──────────────▶ │ r0hc4bc6.s.dnsall.com   │
-└─────────────────────────────┘                 └────────────┬────────────┘
-                                                             │
-┌──────────┐   POST /present (Basic Auth)   ┌────────────────▼──────────┐
-│   lego   │ ──────────────────────────────▶ │         httpdns           │
-│  httpreq │   {fqdn, value}                │  ┌─────────┐ ┌─────────┐ │
-└──────────┘                                │  │ HTTP API│ │   DNS   │ │
-                                            │  └─────────┘ └─────────┘ │
-                                            └───────────────────────────┘</div>
+    <div class="section-header">
+      <h2>Built for automation</h2>
+      <p>Everything you need to manage DNS challenges at scale</p>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon fi-blue">&#9741;</div>
+        <h3>CNAME Delegation</h3>
+        <p>Point _acme-challenge to httpdns via CNAME. No need to grant CA clients access to your production DNS.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon fi-green">&#9823;</div>
+        <h3>Multi-User Isolation</h3>
+        <p>Each user gets a unique nanoid subdomain per domain. Multiple users can independently manage the same domain.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon fi-purple">&#9919;</div>
+        <h3>API Key Authentication</h3>
+        <p>Separate API keys for CLI tools. Web dashboard uses password login. Regenerate keys anytime from the UI.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon fi-orange">&#9783;</div>
+        <h3>Web Dashboard</h3>
+        <p>Add domains, copy CNAME records, view active TXT records, and get pre-filled environment variables.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon fi-cyan">&#10697;</div>
+        <h3>Single Binary</h3>
+        <p>Go binary with embedded React SPA. Deploy one file — no Node.js, no nginx, no separate frontend.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon fi-pink">&#9881;</div>
+        <h3>Admin API</h3>
+        <p>Manage all users and domains via API key. Create users, assign domains, and monitor records programmatically.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="how-it-works" class="section">
+  <div class="section-header">
+    <h2>How it works</h2>
+    <p>Four steps from zero to wildcard certificate</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <h4>Register</h4>
+      <p>Create an account and add your domain in the web dashboard</p>
+    </div>
+    <div class="step">
+      <h4>Set CNAME</h4>
+      <p>Copy the CNAME record and add it to your domain's DNS</p>
+    </div>
+    <div class="step">
+      <h4>Configure</h4>
+      <p>Set HTTPREQ_ENDPOINT and credentials in your environment</p>
+    </div>
+    <div class="step">
+      <h4>Issue</h4>
+      <p>Run lego or configure Traefik — certificates auto-renew</p>
+    </div>
   </div>
 
-  <div class="section">
-    <h2>Quick Start</h2>
-    <div class="code-block"><span class="comment"># docker-compose.yml</span>
-<span class="key">services</span>:
-  <span class="key">httpdns</span>:
-    <span class="key">image</span>: <span class="value">zzci/httpdns:latest</span>
-    <span class="key">ports</span>:
-      - <span class="value">"53:53/udp"</span>
-      - <span class="value">"53:53"</span>
-      - <span class="value">"3000:3000"</span>
-    <span class="key">volumes</span>:
-      - <span class="value">./data:/app/data</span></div>
+  <div class="integrations">
+    <div class="integration"><div style="font-size:1.5rem">&#128274;</div><div class="name">Let's Encrypt</div></div>
+    <div class="integration"><div style="font-size:1.5rem">&#9881;</div><div class="name">lego</div></div>
+    <div class="integration"><div style="font-size:1.5rem">&#128737;</div><div class="name">Traefik</div></div>
+    <div class="integration"><div style="font-size:1.5rem">&#128051;</div><div class="name">Docker</div></div>
+    <div class="integration"><div style="font-size:1.5rem">&#9729;</div><div class="name">Kubernetes</div></div>
   </div>
+</div>
 
+<div id="setup" class="section-alt">
   <div class="section">
-    <h2>Usage with lego</h2>
-    <div class="code-block"><span class="key">LEGO_DISABLE_CNAME_SUPPORT</span>=<span class="value">true</span> \
-<span class="key">HTTPREQ_ENDPOINT</span>=<span class="value">https://api.dnsall.com</span> \
-<span class="key">HTTPREQ_USERNAME</span>=<span class="value">myuser</span> \
-<span class="key">HTTPREQ_PASSWORD</span>=<span class="value">&lt;api_key&gt;</span> \
-lego --dns httpreq --dns.propagation-disable-ans \
-  --domains example.com --domains "*.example.com" \
-  --email admin@example.com --accept-tos run</div>
+    <div class="section-header">
+      <h2>Get started in minutes</h2>
+      <p>Deploy with Docker or build from source</p>
+    </div>
+    <div class="code-tabs">
+      <div class="code-tab">
+        <h3>Docker Compose</h3>
+        <div class="code-box"><span class="cm"># docker-compose.yml</span>
+<span class="k">services</span>:
+  <span class="k">httpdns</span>:
+    <span class="k">image</span>: <span class="v">zzci/httpdns:latest</span>
+    <span class="k">restart</span>: <span class="v">unless-stopped</span>
+    <span class="k">ports</span>:
+      - <span class="v">"53:53/udp"</span>
+      - <span class="v">"53:53"</span>
+      - <span class="v">"3000:3000"</span>
+    <span class="k">volumes</span>:
+      - <span class="v">./data:/app/data</span></div>
+      </div>
+      <div class="code-tab">
+        <h3>Traefik Integration</h3>
+        <div class="code-box"><span class="cm"># traefik.yml</span>
+<span class="k">certificatesResolvers</span>:
+  <span class="k">letsencrypt</span>:
+    <span class="k">acme</span>:
+      <span class="k">email</span>: <span class="v">admin@example.com</span>
+      <span class="k">storage</span>: <span class="v">/data/ssl/acme.json</span>
+      <span class="k">dnsChallenge</span>:
+        <span class="k">provider</span>: <span class="v">httpreq</span>
+        <span class="k">propagation</span>:
+          <span class="k">disableChecks</span>: <span class="v">true</span>
+
+<span class="cm"># environment variables</span>
+<span class="f">LEGO_DISABLE_CNAME_SUPPORT</span>=<span class="v">true</span>
+<span class="f">HTTPREQ_ENDPOINT</span>=<span class="v">https://api.dnsall.com</span>
+<span class="f">HTTPREQ_USERNAME</span>=<span class="v">myuser</span>
+<span class="f">HTTPREQ_PASSWORD</span>=<span class="v">&lt;api_key&gt;</span></div>
+      </div>
+    </div>
   </div>
+</div>
 
-  <div class="section">
-    <h2>API Endpoints</h2>
-    <table class="api-table">
-      <thead>
-        <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
-      </thead>
-      <tbody>
-        <tr><td class="method">POST</td><td><code>/present</code></td><td>Basic Auth</td><td>Store TXT record</td></tr>
-        <tr><td class="method">POST</td><td><code>/cleanup</code></td><td>Basic Auth</td><td>Remove TXT record</td></tr>
-        <tr><td class="method">POST</td><td><code>/api/register</code></td><td>None</td><td>Register user</td></tr>
-        <tr><td class="method">POST</td><td><code>/api/login</code></td><td>None</td><td>Login</td></tr>
-        <tr><td class="method">GET</td><td><code>/api/domains</code></td><td>JWT</td><td>List domains</td></tr>
-        <tr><td class="method">POST</td><td><code>/api/domains</code></td><td>JWT</td><td>Add domain</td></tr>
-        <tr><td class="method">GET</td><td><code>/api/records</code></td><td>JWT</td><td>List TXT records</td></tr>
-        <tr><td class="method">GET</td><td><code>/admin/users</code></td><td>Admin Key</td><td>List all users</td></tr>
-        <tr><td class="method">GET</td><td><code>/admin/domains</code></td><td>Admin Key</td><td>List all domains</td></tr>
-      </tbody>
-    </table>
+<div id="api" class="section">
+  <div class="section-header">
+    <h2>API Reference</h2>
+    <p>RESTful API with three authentication levels</p>
+  </div>
+  <div class="api-grid">
+    <div class="api-group">
+      <h3><span class="badge badge-basic">Basic Auth</span> httpreq Endpoints</h3>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/present</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/cleanup</span></div>
+    </div>
+    <div class="api-group">
+      <h3><span class="badge badge-none">Public</span> Authentication</h3>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/api/register</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/api/login</span></div>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/api/info</span></div>
+    </div>
+    <div class="api-group">
+      <h3><span class="badge badge-jwt">JWT Bearer</span> User Endpoints</h3>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/api/profile</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/api/profile/regenerate-key</span></div>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/api/domains</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/api/domains</span></div>
+      <div class="api-item"><span class="api-method">DELETE</span><span class="api-path">/api/domains/:domain</span></div>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/api/records</span></div>
+    </div>
+    <div class="api-group">
+      <h3><span class="badge badge-admin">X-Admin-Key</span> Admin Endpoints</h3>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/admin/users</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/admin/users</span></div>
+      <div class="api-item"><span class="api-method">DELETE</span><span class="api-path">/admin/users/:id</span></div>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/admin/domains</span></div>
+      <div class="api-item"><span class="api-method">POST</span><span class="api-path">/admin/domains</span></div>
+      <div class="api-item"><span class="api-method">GET</span><span class="api-path">/admin/records</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="cta-bottom">
+  <h2>Ready to automate your certificates?</h2>
+  <p>Deploy httpdns in minutes. Open source, self-hosted, no vendor lock-in.</p>
+  <div class="cta">
+    <a href="https://github.com/zzci/httpdns" class="cta-primary">View on GitHub</a>
+    <a href="https://hub.docker.com/r/zzci/httpdns" class="cta-secondary">Pull from Docker Hub</a>
   </div>
 </div>
 
 <footer>
-  <a href="https://github.com/zzci/httpdns">GitHub</a> · MIT License
+  <a href="https://github.com/zzci/httpdns">GitHub</a>
+  <a href="https://hub.docker.com/r/zzci/httpdns">Docker Hub</a>
+  <a href="https://github.com/zzci/httpdns/blob/main/LICENSE">MIT License</a>
 </footer>
 
 </body>
