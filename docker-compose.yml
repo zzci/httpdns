@@ -8,4 +8,4 @@ services:
       - "53:53/udp"
       - "3000:3000"
     volumes:
-      - ./data:/data
+      - ./data:/app/data
