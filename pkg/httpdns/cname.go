@@ -2,12 +2,14 @@ package httpdns
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"math/big"
 	"strings"
 )
 
 const nanoidAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
-const nanoidLength = 8
+const subdomainLength = 8
 const apiKeyLength = 32
 
 // GenerateAPIKey creates a random API key (32-char lowercase alphanumeric).
@@ -21,15 +23,15 @@ func GenerateAPIKey() string {
 	return string(b)
 }
 
-// GenerateSubdomain creates a random nanoid-style subdomain (lowercase alphanumeric).
-func GenerateSubdomain() string {
-	b := make([]byte, nanoidLength)
-	max := big.NewInt(int64(len(nanoidAlphabet)))
-	for i := range b {
-		n, _ := rand.Int(rand.Reader, max)
-		b[i] = nanoidAlphabet[n.Int64()]
-	}
-	return string(b)
+// GenerateSubdomain creates a deterministic subdomain from username and domain.
+// The same username+domain always produces the same subdomain, so even if
+// the database is lost, CNAME records don't need to change.
+func GenerateSubdomain(username, domain string) string {
+	input := strings.ToLower(username) + ":" + strings.ToLower(domain)
+	hash := sha256.Sum256([]byte(input))
+	hexStr := hex.EncodeToString(hash[:])
+	// Take first 8 chars — hex only uses 0-9a-f, which is a subset of nanoidAlphabet
+	return hexStr[:subdomainLength]
 }
 
 // InternalDomain returns the full internal domain for a subdomain under the base domain.

@@ -131,7 +131,7 @@ func (a *API) apiAddDomain(w http.ResponseWriter, r *http.Request, _ httprouter.
 		jsonResp(w, http.StatusBadRequest, map[string]string{"error": "domain_required"})
 		return
 	}
-	ud, err := a.DB.AddUserDomain(user.ID, domain)
+	ud, err := a.DB.AddUserDomain(user.ID, user.Username, domain)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
 			jsonResp(w, http.StatusConflict, map[string]string{"error": "domain_already_exists"})

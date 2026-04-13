@@ -188,7 +188,7 @@ func TestUserDomains(t *testing.T) {
 	user, _ := db.CreateUser("domuser", "$2a$10$hash")
 
 	// Add domains — returns UserDomain with nanoid subdomain
-	ud1, err := db.AddUserDomain(user.ID, "example.com")
+	ud1, err := db.AddUserDomain(user.ID, "domuser", "example.com")
 	if err != nil {
 		t.Fatalf("AddUserDomain failed: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestUserDomains(t *testing.T) {
 		t.Errorf("Expected domain example.com, got %s", ud1.Domain)
 	}
 
-	ud2, err := db.AddUserDomain(user.ID, "other.com")
+	ud2, err := db.AddUserDomain(user.ID, "domuser", "other.com")
 	if err != nil {
 		t.Fatalf("AddUserDomain failed: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestUserDomains(t *testing.T) {
 
 	// Different user can add same domain (gets different nanoid)
 	user2, _ := db.CreateUser("domuser2", "$2a$10$hash2")
-	ud3, err := db.AddUserDomain(user2.ID, "example.com")
+	ud3, err := db.AddUserDomain(user2.ID, "domuser2", "example.com")
 	if err != nil {
 		t.Fatalf("Second user AddUserDomain failed: %v", err)
 	}

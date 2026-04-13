@@ -19,7 +19,7 @@ type DB interface {
 	RegenerateAPIKey(userID int64) (string, error)
 
 	// Domain management
-	AddUserDomain(userID int64, domain string) (UserDomain, error)
+	AddUserDomain(userID int64, username, domain string) (UserDomain, error)
 	RemoveUserDomain(userID int64, domain string) error
 	GetUserDomains(userID int64) ([]UserDomain, error)
 	GetSubdomainByUserDomain(userID int64, domain string) (string, error)

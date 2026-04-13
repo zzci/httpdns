@@ -114,7 +114,12 @@ func (a *API) adminAddDomain(w http.ResponseWriter, r *http.Request, _ httproute
 		jsonResp(w, http.StatusBadRequest, map[string]string{"error": "user_id and domain required"})
 		return
 	}
-	ud, err := a.DB.AddUserDomain(req.UserID, domain)
+	user, err := a.DB.GetUserByID(req.UserID)
+	if err != nil {
+		jsonResp(w, http.StatusNotFound, map[string]string{"error": "user_not_found"})
+		return
+	}
+	ud, err := a.DB.AddUserDomain(req.UserID, user.Username, domain)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
 			jsonResp(w, http.StatusConflict, map[string]string{"error": "domain_already_exists"})

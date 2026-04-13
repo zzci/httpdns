@@ -427,11 +427,11 @@ func (d *acmednsdb) RegenerateAPIKey(userID int64) (string, error) {
 
 // --- Domain methods ---
 
-func (d *acmednsdb) AddUserDomain(userID int64, domain string) (httpdns.UserDomain, error) {
+func (d *acmednsdb) AddUserDomain(userID int64, username, domain string) (httpdns.UserDomain, error) {
 	d.Mutex.Lock()
 	defer d.Mutex.Unlock()
 	domain = strings.ToLower(strings.TrimSpace(domain))
-	subdomain := httpdns.GenerateSubdomain()
+	subdomain := httpdns.GenerateSubdomain(username, domain)
 	insSQL := `INSERT INTO user_domains (user_id, domain, subdomain) VALUES ($1, $2, $3)`
 	if d.Config.Database.Engine == "sqlite" {
 		insSQL = getSQLiteStmt(insSQL)
