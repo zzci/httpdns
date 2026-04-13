@@ -2,6 +2,8 @@ module github.com/zzci/httpdns
 
 go 1.23.0
 
+toolchain go1.24.2
+
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/caddyserver/certmagic v0.23.0
