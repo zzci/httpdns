@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="200" height="200" rx="40" fill="url(#bg)"/>
+  <!-- DNS shield shape -->
+  <path d="M100 30 L160 60 L160 110 Q160 155 100 175 Q40 155 40 110 L40 60 Z" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+  <!-- Lightning bolt (DNS speed) -->
+  <path d="M112 55 L85 105 L105 105 L88 150 L130 95 L108 95 Z" fill="url(#bolt)"/>
+  <!-- Status dot -->
+  <circle cx="155" cy="45" r="12" fill="#34d399"/>
+  <circle cx="155" cy="45" r="6" fill="#fff"/>
+</svg>
